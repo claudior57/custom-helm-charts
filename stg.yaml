@@ -1,0 +1,14 @@
+name: helloworld
+tag: <autotag>
+namespace: stg
+azureAccount: staging
+
+env:
+  APP_NAME: 'helloworld-stg'
+  PY_ENV: 'staging'
+
+lb:
+  type: nginx-internal
+  hosts:
+    - host: helloworld.stg.iaclab.com
+      paths: ["/"]

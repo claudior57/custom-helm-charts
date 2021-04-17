@@ -1,0 +1,6 @@
+.terraform/
+.idea/
+*.tgz
+*.iml
+README_old.md
+envs-stg2.sh

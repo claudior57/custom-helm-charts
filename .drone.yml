@@ -1,0 +1,41 @@
+kind: pipeline
+type: kubernetes
+name: lint
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: helm-lint
+  image: iaclab/pipe-utils:0.0.1
+  commands:
+  - helm lint application/
+
+---
+kind: pipeline
+type: kubernetes
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
+trigger:
+  branch:
+  - master
+  event:
+    exclude:
+    - pull_request
+
+steps:
+- name: helm-application
+  pull: always
+  image: iaclab/pipe-utils:0.0.1
+  commands:
+  - helm repo add $HELM_REPO s3://$HELM_REPO
+  - helm repo update
+  - helm package application/
+  - helm s3 push ./application-$(yq r application/Chart.yaml 'version').tgz $HELM_REPO
+  environment:
+    HELM_REPO: devops-helm-charts

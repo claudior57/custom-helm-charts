@@ -1,0 +1,134 @@
+{{- $releaseName := .Release.Name -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mychart.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+{{ include "mychart.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "mychart.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.maxSurge }}
+      maxUnavailable: {{ .Values.maxUnavailable }}
+  template:
+    metadata:
+      annotations:
+      {{- if .Values.podAnnotations }}
+      {{ toYaml .Values.podAnnotations | indent 2 }}
+      {{- end }}
+      labels:
+        date: {{ date "20060102150405" now | quote }}
+        app.kubernetes.io/name: {{ include "mychart.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      {{- if .Values.volumes }}
+      securityContext:
+        fsGroup: 2000 
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.preStopTime }}
+    {{- if .Values.imagePullSecrets }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else }}
+      imagePullSecrets:
+        - name: {{ .Values.namespace }}-regcred
+    {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- if .Values.image }}
+          image: "{{ .Values.image }}:{{ .Values.tag }}"
+          {{- else }}
+          image: "acr{{ .Values.azureAccount }}.azurecr.io/{{ .Release.Name }}:{{ .Values.tag }}"
+          {{- end }}
+          imagePullPolicy: {{ .Values.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: {{ .Values.portProtocol }}
+          {{- range .Values.extraContainerPorts }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol:  {{ .protocol  }}
+          {{- end }}  
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessPath | default .Values.healthCheckPath }}
+              port: {{ .Values.containerPort }}
+            initialDelaySeconds: {{ .Values.livenessInitialDelaySeconds | default .Values.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessPeriodSeconds | default .Values.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessTimeoutSeconds | default .Values.timeoutSeconds }}
+            successThreshold: 1
+            failureThreshold: {{ .Values.livenessFailureThreshold | default .Values.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessPath | default .Values.healthCheckPath }}
+              port: {{ .Values.containerPort }}
+            initialDelaySeconds: {{ .Values.readinessInitialDelaySeconds | default .Values.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessPeriodSeconds | default .Values.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessTimeoutSeconds | default .Values.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessSuccessThreshold | default .Values.successThreshold }}
+            failureThreshold: {{ .Values.readinessFailureThreshold | default .Values.failureThreshold }}
+          {{- if .Values.volumes }}
+          volumeMounts:
+          {{ range .Values.volumes }}
+          - name: "{{ $releaseName }}-{{ .name }}"
+            mountPath: {{ .mountPath }}
+            {{- if .readOnly }}
+            readOnly:  {{ .readOnly }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+          env:
+          {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.cpuRequests | default .Values.cpu }}
+              memory: {{ .Values.memoryRequests | default .Values.memory }}
+            limits:
+              cpu: {{ .Values.cpu }}
+              memory: {{ .Values.memory }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", {{ .Values.preStopTime | quote }}]
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.volumes }}
+      volumes:
+      {{ range .Values.volumes }}
+      - name: "{{ $releaseName }}-{{ .name }}"
+        persistentVolumeClaim:
+          claimName: "{{ $releaseName }}-{{ .name }}"
+      {{- end }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- if .Values.dnsNDots }}
+      dnsConfig:
+        options:
+          - name: ndots
+            value: {{ .Values.dnsNDots | quote }}
+    {{- end }}

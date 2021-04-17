@@ -1,0 +1,30 @@
+{{ if (or (and .Values.maxReplicaCount .Values.cpuAverageUtilization) (and .Values.maxReplicaCount .Values.memoryAverageUtilization)) }}
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "mychart.fullname" . }}
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: {{ include "mychart.fullname" . }}
+  minReplicas: {{ .Values.replicaCount }}
+  maxReplicas: {{ .Values.maxReplicaCount }}
+  metrics:
+{{- if .Values.cpuAverageUtilization }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: AverageValue
+        averageUtilization: {{ .Values.cpuAverageUtilization }}
+{{- end }}
+{{- if .Values.memoryAverageUtilization }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: AverageValue
+        averageUtilization: {{ .Values.memoryAverageUtilization }}
+{{- end }}
+{{ end }}

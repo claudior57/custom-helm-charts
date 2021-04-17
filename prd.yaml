@@ -1,0 +1,14 @@
+name: helloworld
+tag: <autotag>
+namespace: prd
+azureAccount: staging
+
+env:
+  APP_NAME: 'helloworld-prd'
+  PY_ENV: 'production'
+
+lb:
+  type: azure/application-gateway
+  hosts:
+    - host: helloworld.iaclab.com
+      paths: ["/"]

@@ -1,0 +1,66 @@
+name: ""
+image: ""
+tag: "<tag>"
+
+#this could be "dev", "stg", or "prd", default is dev
+namespace: dev
+
+#azureAccount should be staging, or production
+azureAccount: staging
+
+replicaCount: 1
+maxReplicaCount:
+cpu: 1
+cpuAverageUtilization:
+cpuRequests:
+memory: 1Gi
+memoryAverageUtilization:
+memoryRequests:
+maxSurge: 1
+maxUnavailable: 0
+pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+
+service:
+  type: 'NodePort'
+  port: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+containerPort: 8080
+portProtocol: TCP
+
+healthCheckPath: /
+initialDelaySeconds: 30
+periodSeconds: 15
+timeoutSeconds: 5
+successThreshold: 2
+failureThreshold: 3
+terminationGracePeriodSeconds: 30
+# branch release active
+# branchRelease: true 
+# colapse after n day(s)
+branchReleaseCollapseTime: 1 
+
+
+# volumes:
+# - name: logs
+#   mountPath: /logs
+#   size: 5Gi
+#   readOnly: false
+#   storageClassName: ""
+#   accessMode: ReadWriteOnce
+
+env: {}
+
+preStopTime: 30
+tgDeregistrationDelay: 30
+
+serviceAccount:
+  create: true
